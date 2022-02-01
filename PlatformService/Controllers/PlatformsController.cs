@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using PlatformService.Data;
 using PlatformService.Dtos;
 using PlatformService.Models;
+using PlatformService.SyncDataServices.Http;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PlatformService.Controllers
 {
@@ -13,11 +16,16 @@ namespace PlatformService.Controllers
     {
         private readonly IPlatformRepository _platformRepository;
         private readonly IMapper _mapper;
+        private readonly ICommandDataClient _commandDataClient;
 
-        public PlatformsController(IPlatformRepository platformRepository, IMapper mapper)
+        public PlatformsController(
+            IPlatformRepository platformRepository, 
+            IMapper mapper, 
+            ICommandDataClient commandDataClient)
         {
             _platformRepository = platformRepository;
             _mapper = mapper;
+            _commandDataClient = commandDataClient;
         }
 
         [HttpGet]
@@ -40,7 +48,7 @@ namespace PlatformService.Controllers
         }
 
         [HttpPost]
-        public ActionResult<PlatformReadDto> CreatePlatform(PlatformCreateDto platform) 
+        public async Task<ActionResult<PlatformReadDto>> CreatePlatformAsync(PlatformCreateDto platform) 
         {
             var platformModel = _mapper.Map<Platform>(platform);
 
@@ -49,7 +57,19 @@ namespace PlatformService.Controllers
 
             var platformReadDto = _mapper.Map<PlatformReadDto>(platformModel);
 
-            return CreatedAtRoute(nameof(GetPlatformsById), new { Id = platformReadDto.Id}, platformReadDto);
+            try
+            {
+                await _commandDataClient.SendPlatformToCommand(platformReadDto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"--> Could not send synchronously: {ex.Message}");
+            }
+
+            return CreatedAtRoute(
+                nameof(GetPlatformsById), 
+                new { Id = platformReadDto.Id }, 
+                platformReadDto);
         }
     }
 }
