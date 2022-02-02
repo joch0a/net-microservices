@@ -13,19 +13,19 @@ namespace PlatformService
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
         }
 
         public IConfiguration Configuration { get; }
 
+        private readonly IWebHostEnvironment _env;
+
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                options.UseInMemoryDatabase("InMem");
-            });
+            AddDatabaseConfiguration(services);
 
             services.AddScoped<IPlatformRepository, PlatformRepository>();
             services.AddHttpClient<ICommandDataClient, HttpCommandDataClient>();
@@ -37,6 +37,28 @@ namespace PlatformService
             });
 
             Console.WriteLine($"--> CommandService endpoint: {Configuration["CommandService"]}");
+        }
+
+        private void AddDatabaseConfiguration(IServiceCollection services)
+        {
+            if (_env.IsDevelopment())
+            {
+                Console.WriteLine("--> Using In memory");
+
+                services.AddDbContext<AppDbContext>(options =>
+                {
+                    options.UseInMemoryDatabase("InMem");
+                });
+            }
+            else
+            {
+                Console.WriteLine("--> Using SQL Server");
+
+                services.AddDbContext<AppDbContext>(options =>
+                {
+                    options.UseSqlServer(Configuration.GetConnectionString("PlatformsConn"));
+                });
+            }
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -59,7 +81,7 @@ namespace PlatformService
                 endpoints.MapControllers();
             });
 
-            PrepareInMemoryDatabase.PreparePopulation(app);
+            PrepareDb.PreparePopulation(app, env.IsProduction());
         }
     }
 }
