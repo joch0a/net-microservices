@@ -1,4 +1,6 @@
+using CommandsService.AsynDataServices;
 using CommandsService.Data;
+using CommandsService.EventProccesing;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +30,8 @@ namespace CommandsService
                 options => options.UseInMemoryDatabase("InMemoryDb")
             );
             services.AddScoped<ICommandRepository, CommandRepository>();
-            
+            services.AddSingleton<IEventProcessor, EventProcessor>();
+            services.AddHostedService<MessageBusSubscriber>();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
             services.AddSwaggerGen(c =>
             {
