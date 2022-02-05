@@ -1,6 +1,7 @@
 using CommandsService.AsynDataServices;
 using CommandsService.Data;
 using CommandsService.EventProccesing;
+using CommandsService.SyncDataServices.Grpc;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ namespace CommandsService
                 options => options.UseInMemoryDatabase("InMemoryDb")
             );
             services.AddScoped<ICommandRepository, CommandRepository>();
+            services.AddScoped<IPlatformDataClient, PlatformDataClient>();
             services.AddSingleton<IEventProcessor, EventProcessor>();
             services.AddHostedService<MessageBusSubscriber>();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
@@ -58,6 +60,8 @@ namespace CommandsService
             {
                 endpoints.MapControllers();
             });
+
+            PrepareDatabase.PreparePopulation(app);
         }
     }
 }
